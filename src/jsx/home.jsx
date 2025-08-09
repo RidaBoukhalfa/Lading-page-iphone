@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import all from '../images/all_colors.jpg';
 import black from '../images/black.jpg';
 import desert from '../images/desert.jpg';
@@ -9,11 +9,16 @@ import '../css/home.css';
 function Home() {
     const [alertMessage, setAlertMessage] = useState("");
     const [alertType, setAlertType] = useState(""); // "success" or "error"
+    const [isClosing, setIsClosing] = useState(false);
     const [deliveryPrice, setDeliveryPrice] = useState(0);
     const [selectedWilaya, setSelectedWilaya] = useState("");
     const [locationType, setLocationType] = useState(""); // home or office
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+    const [showConfirmation, setShowConfirmation] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [formData, setFormData] = useState(null);
     const [fieldErrors, setFieldErrors] = useState({});
+    const [selectedColor, setSelectedColor] = useState("all");
 
     const basePrice = 189000; // base product price
 
@@ -35,11 +40,6 @@ function Home() {
         "41": 2100, "42": 2000, "43": 2200, "44": 1700, "45": 2200, "46": 2100, "47": 2200, "48": 1700, "49": 2200, "50": 2000,
         "51": 2200, "52": 2100, "53": 2200, "54": 1700, "55": 2200, "56": 2100, "57": 2200, "58": 1700
     };
-
-    useEffect(() => {
-        const allImage = document.getElementById('all');
-        if (allImage) allImage.classList.add('show');
-    }, []);
 
     // Update delivery & total prices
     const updatePrices = (wilaya, location) => {
@@ -63,18 +63,11 @@ function Home() {
     };
 
     const handleColorChange = (color) => {
-        const images = document.querySelectorAll('.img-color');
-        images.forEach(img => {
-            if (img.id === color) {
-                img.classList.add('show');
-            } else {
-                img.classList.remove('show');
-            }
-        });
+        setSelectedColor(color);
     };
 
-    const images = useRef(null);
-    const buy = useRef(null);
+    const imagesRef = useRef(null);
+    const buyRef = useRef(null);
 
     const scrollToSection = (elementRef) => {
         const navHeight = document.querySelector('.nav').offsetHeight;
@@ -111,25 +104,19 @@ function Home() {
         return Object.keys(errors).length === 0;
     };
 
-    const handleFormSubmit = async () => {
-        if (!validateForm()) {
-            setAlertMessage("⚠ Please fill in all required fields.");
-            setAlertType("error");
-            return;
-        }
-
+    const collectFormData = () => {
         const name = document.getElementById('name').value.trim();
         const phone = document.getElementById('phone').value.trim();
-        const ram = document.querySelector('input[name="ram"]:checked').value;
-        const storage = document.querySelector('input[name="storage"]:checked').value;
-        const sim = document.querySelector('input[name="sim"]:checked').value;
-        const color = document.querySelector('input[name="color"]:checked').value;
+        const ram = document.querySelector('input[name="ram"]:checked')?.value || '';
+        const storage = document.querySelector('input[name="storage"]:checked')?.value || '';
+        const sim = document.querySelector('input[name="sim"]:checked')?.value || '';
+        const color = document.querySelector('input[name="color"]:checked')?.value || '';
         const wilaya = selectedWilaya;
         const address = document.getElementById('address').value.trim();
         const email = document.getElementById('email').value.trim();
         const location = locationType;
 
-        const data = {
+        return {
             name,
             email,
             phone,
@@ -143,6 +130,26 @@ function Home() {
             priceDelivery: deliveryPrice,
             totalPrice: basePrice + deliveryPrice
         };
+    };
+
+    const handleBuyNow = () => {
+        if (!validateForm()) {
+            setAlertMessage("⚠ Please fill in all required fields.");
+            setAlertType("error");
+            setIsClosing(false); // Ensure not closing when showing new alert
+            return;
+        }
+
+        const data = collectFormData();
+        setFormData(data);
+        setShowConfirmation(true);
+    };
+
+    const handleConfirmOrder = async () => {
+        setIsLoading(true);
+        setAlertMessage("");
+        setAlertType("");
+        setIsClosing(false);
 
         try {
             await fetch(
@@ -151,62 +158,87 @@ function Home() {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(formData)
                 }
             );
-            setAlertMessage("");
-            setAlertType("");
+            setShowConfirmation(false);
             setShowSuccessPopup(true);
         } catch {
             setAlertMessage("❌ Error sending order. Please try again.");
             setAlertType("error");
+        } finally {
+            setIsLoading(false);
         }
-    };
-
-    const handleBuyNow = () => {
-        handleFormSubmit();
     };
 
     // Helper to style inputs with error border
     const errorStyle = { border: "2px solid red" };
 
+    const colorImages = {
+        all: { src: all, alt: "all colors" },
+        black: { src: black, alt: "black color" },
+        desert: { src: desert, alt: "desert color" },
+        natural: { src: natural, alt: "natural color" },
+        white: { src: white, alt: "white color" }
+    };
+    
+
     return (
         <div className='container-home'>
             {alertMessage && !showSuccessPopup && (
-                <div className={`custom-alert ${alertType}`}>
+                <div 
+                    className={`custom-alert ${alertType}`}
+                    style={{ 
+                        opacity: isClosing ? 0 : 1, 
+                        transition: 'opacity 0.3s ease' 
+                    }}
+                    onTransitionEnd={() => {
+                        if (isClosing) {
+                            setAlertMessage("");
+                            setIsClosing(false);
+                        }
+                    }}
+                >
                     {alertMessage}
+                    <span
+                        className="close-alert"
+                        onClick={() => setIsClosing(true)}
+                        style={{ cursor: 'pointer', float: 'right', marginLeft: '10px', fontSize: '1.2em' }}
+                    >
+                        ×
+                    </span>
                 </div>
             )}
 
             <nav className='nav'>
-                <button onClick={() => scrollToSection(images)} className='up-to-img'>images</button>
-                <h3 className='name-store'>Store name</h3>
-                <button onClick={() => scrollToSection(buy)} className='btn-buy-up'>Buy now</button>
+                <button onClick={() => scrollToSection(imagesRef)} className='up-to-img'>Images</button>
+                <h3 className='name-store'>Store Name</h3>
+                <button onClick={() => scrollToSection(buyRef)} className='btn-buy-up'>Buy Now</button>
             </nav>
 
-            <h2 className='title'>Iphone 16 pro max</h2>
-            <div ref={images} className='img-btn'>
+            <h2 className='title'>iPhone 16 Pro Max</h2>
+            <div ref={imagesRef} className='img-btn'>
                 <div className='container-images'>
-                    <img className='img-color' id='all' src={all} alt="all colors" />
-                    <img className='img-color' id='black' src={black} alt="black color" />
-                    <img className='img-color' id='desert' src={desert} alt="desert color" />
-                    <img className='img-color' id='natural' src={natural} alt="natural color" />
-                    <img className='img-color' id='white' src={white} alt="white color" />
-                    <div className='change-colors'>
-                        <button onClick={() => handleColorChange('all')}>All colors</button>
-                        <button onClick={() => handleColorChange('black')}>Black</button>
-                        <button onClick={() => handleColorChange('desert')}>Desert</button>
-                        <button onClick={() => handleColorChange('natural')}>Natural</button>
-                        <button onClick={() => handleColorChange('white')}>White</button>
-                    </div>
+                    <img 
+                        className='img-color' 
+                        src={colorImages[selectedColor].src} 
+                        alt={colorImages[selectedColor].alt} 
+                    />
+                </div>
+                <div className='change-colors'>
+                    <button onClick={() => handleColorChange('all')}>All</button>
+                    <button onClick={() => handleColorChange('black')}>Black</button>
+                    <button onClick={() => handleColorChange('desert')}>Desert</button>
+                    <button onClick={() => handleColorChange('natural')}>Natural</button>
+                    <button onClick={() => handleColorChange('white')}>White</button>
                 </div>
             </div>
 
             <h3 className='price'>{basePrice.toLocaleString()} DA</h3>
             <p className='description'>Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
 
-            <div ref={buy} className='container-form'>
-                <h2>Form</h2>
+            <div ref={buyRef} className='container-form'>
+                <h2>Order Form</h2>
                 <form className='form' onSubmit={(e) => e.preventDefault()}>
                     <label>
                         Name *
@@ -238,7 +270,7 @@ function Home() {
                     </label>
 
                     <label>RAM *</label>
-                    <div className="radio-group" defaultValue={''} style={fieldErrors.ram ? { border: "1.5px solid red", padding: "5px" } : {}}>
+                    <div className="radio-group" style={fieldErrors.ram ? { border: "1.5px solid red", padding: "5px", borderRadius: "8px" } : {}}>
                         <input type="radio" id="ram4" name="ram" value="4GB" />
                         <label htmlFor="ram4">4GB</label>
 
@@ -250,7 +282,7 @@ function Home() {
                     </div>
 
                     <label>Storage *</label>
-                    <div className="radio-group" defaultValue={''} style={fieldErrors.storage ? { border: "1.5px solid red", padding: "5px" } : {}}>
+                    <div className="radio-group" style={fieldErrors.storage ? { border: "1.5px solid red", padding: "5px", borderRadius: "8px" } : {}}>
                         <input type="radio" id="st32" name="storage" value="32GB" />
                         <label htmlFor="st32">32GB</label>
 
@@ -265,7 +297,7 @@ function Home() {
                     </div>
 
                     <label>Number of SIM cards *</label>
-                    <div className="radio-group" defaultValue={''} style={fieldErrors.sim ? { border: "1.5px solid red", padding: "5px" } : {}}>
+                    <div className="radio-group" style={fieldErrors.sim ? { border: "1.5px solid red", padding: "5px", borderRadius: "8px" } : {}}>
                         <input type="radio" id="sim1" name="sim" value="1" />
                         <label htmlFor="sim1">1</label>
 
@@ -274,7 +306,7 @@ function Home() {
                     </div>
 
                     <label>Color *</label>
-                    <div className="radio-group" style={fieldErrors.color ? { border: "1.5px solid red", padding: "5px" } : {}}>
+                    <div className="radio-group" style={fieldErrors.color ? { border: "1.5px solid red", padding: "5px", borderRadius: "8px" } : {}}>
                         <input type="radio" id="color-black" name="color" value="black" />
                         <label htmlFor="color-black">Black</label>
                         <input type="radio" id="color-desert" name="color" value="desert" />
@@ -296,8 +328,7 @@ function Home() {
                             style={fieldErrors.wilaya ? errorStyle : {}}
                         >
                             <option value="" disabled>-- Select your wilaya --</option>
-                            {/* options truncated for brevity; keep your options here */}
-                            <option value="1">01 - Adrar</option>
+                           <option value="1">01 - Adrar</option>
                             <option value="2">02 - Chlef</option>
                             <option value="3">03 - Laghouat</option>
                             <option value="4">04 - Oum El Bouaghi</option>
@@ -307,12 +338,59 @@ function Home() {
                             <option value="8">08 - Béchar</option>
                             <option value="9">09 - Blida</option>
                             <option value="10">10 - Bouira</option>
-                            {/* ... rest of your options ... */}
+                            <option value="11">11 - Tamanrasset</option>
+                            <option value="12">12 - Tébessa</option>
+                            <option value="13">13 - Tlemcen</option>
+                            <option value="14">14 - Tiaret</option>
+                            <option value="15">15 - Tizi Ouzou</option>
+                            <option value="16">16 - Alger</option>
+                            <option value="17">17 - Djelfa</option>
+                            <option value="18">18 - Jijel</option>
+                            <option value="19">19 - Sétif</option>
+                            <option value="20">20 - Saïda</option>
+                            <option value="21">21 - Skikda</option>
+                            <option value="22">22 - Sidi Bel Abbès</option>
+                            <option value="23">23 - Annaba</option>
+                            <option value="24">24 - Guelma</option>
+                            <option value="25">25 - Constantine</option>
+                            <option value="26">26 - Médéa</option>
+                            <option value="27">27 - Mostaganem</option>
+                            <option value="28">28 - M'Sila</option>
+                            <option value="29">29 - Mascara</option>
+                            <option value="30">30 - Ouargla</option>
+                            <option value="31">31 - Oran</option>
+                            <option value="32">32 - El Bayadh</option>
+                            <option value="33">33 - Illizi</option>
+                            <option value="34">34 - Bordj Bou Arréridj</option>
+                            <option value="35">35 - Boumerdès</option>
+                            <option value="36">36 - El Tarf</option>
+                            <option value="37">37 - Tindouf</option>
+                            <option value="38">38 - Tissemsilt</option>
+                            <option value="39">39 - El Oued</option>
+                            <option value="40">40 - Khenchela</option>
+                            <option value="41">41 - Souk Ahras</option>
+                            <option value="42">42 - Tipaza</option>
+                            <option value="43">43 - Mila</option>
+                            <option value="44">44 - Aïn Defla</option>
+                            <option value="45">45 - Naâma</option>
+                            <option value="46">46 - Aïn Témouchent</option>
+                            <option value="47">47 - Ghardaïa</option>
+                            <option value="48">48 - Relizane</option>
+                            <option value="49">49 - El M'ghair</option>
+                            <option value="50">50 - El Meniaa</option>
+                            <option value="51">51 - Ouled Djellal</option>
+                            <option value="52">52 - Bordj Badji Mokhtar</option>
+                            <option value="53">53 - Béni Abbès</option>
+                            <option value="54">54 - Timimoun</option>
+                            <option value="55">55 - Touggourt</option>
+                            <option value="56">56 - Djanet</option>
+                            <option value="57">57 - In Salah</option>
+                            <option value="58">58 - In Guezzam</option>
                         </select>
                     </label>
 
                     <label>Delivery Location *</label>
-                    <div className="radio-group" style={fieldErrors.location ? { border: "1.5px solid red", padding: "5px" } : {}}>
+                    <div className="radio-group" style={fieldErrors.location ? { border: "1.5px solid red", padding: "5px", borderRadius: "8px" } : {}}>
                         <input type="radio" id="loc-home" name="location" value="home" onChange={handleLocationChange} />
                         <label htmlFor="loc-home">Home</label>
                         <input type="radio" id="loc-office" name="location" value="office" onChange={handleLocationChange} />
@@ -320,7 +398,7 @@ function Home() {
                     </div>
 
                     <label>
-                        Address *
+                        Address
                         <input
                             type="text"
                             className='input'
@@ -330,7 +408,7 @@ function Home() {
                     </label>
 
                     <label>
-                        Price Delivery
+                        Delivery Price
                         <input type="text" className='input' id='price-delivery' readOnly />
                     </label>
 
@@ -341,11 +419,53 @@ function Home() {
                 </form>
             </div>
 
-            <button className='btn-buy' onClick={handleBuyNow}>Buy now</button>
+            <button className='btn-buy' onClick={handleBuyNow}>Buy Now</button>
 
             <div className='container-footer'>
-                <p className='footer-text'>© 2023 Store name. All rights reserved.</p>
+                <p className='footer-text'>© 2023 Store Name. All rights reserved.</p>
             </div>
+
+            {/* Confirmation Popup */}
+            {showConfirmation && (
+                <div style={styles.popupOverlay}>
+                    <div style={styles.popupBox}>
+                        <h2>Confirm Order</h2>
+                        <p>Please review your order details:</p>
+                        <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+                            <p><strong>Name:</strong> {formData.name}</p>
+                            <p><strong>Email:</strong> {formData.email || 'N/A'}</p>
+                            <p><strong>Phone:</strong> {formData.phone}</p>
+                            <p><strong>RAM:</strong> {formData.ram}</p>
+                            <p><strong>Storage:</strong> {formData.storage}</p>
+                            <p><strong>SIM Cards:</strong> {formData.sim}</p>
+                            <p><strong>Color:</strong> {formData.color}</p>
+                            <p><strong>Wilaya:</strong> {formData.wilaya}</p>
+                            <p><strong>Delivery Location:</strong> {formData.location}</p>
+                            <p><strong>Address:</strong> {formData.address}</p>
+                            <p><strong>Delivery Price:</strong> {formData.priceDelivery} DA</p>
+                            <p><strong>Total Price:</strong> {formData.totalPrice} DA</p>
+                        </div>
+                        {isLoading ? (
+                            <p style={{ color: '#4caf50', fontWeight: 'bold' }}>Sending order...</p>
+                        ) : (
+                            <div>
+                                <button
+                                    onClick={handleConfirmOrder}
+                                    style={styles.confirmButton}
+                                >
+                                    Confirm
+                                </button>
+                                <button
+                                    onClick={() => setShowConfirmation(false)}
+                                    style={styles.cancelButton}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Success Popup Overlay */}
             {showSuccessPopup && (
@@ -380,22 +500,45 @@ const styles = {
     },
     popupBox: {
         backgroundColor: '#fff',
-        padding: '30px 40px',
+        padding: '20px',
         borderRadius: '10px',
         textAlign: 'center',
         boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-        animation: 'scaleIn 0.3s ease'
+        animation: 'scaleIn 0.3s ease',
+        maxWidth: '400px',
+        width: '90%',
+        maxHeight: '80vh',
+        overflowY: 'auto'
     },
     checkmark: {
         fontSize: '4rem',
-        color: 'green',
+        color: '#4caf50',
         marginBottom: '15px',
         animation: 'bounceIn 0.5s ease'
     },
     closeButton: {
         marginTop: '20px',
         padding: '10px 25px',
-        backgroundColor: 'green',
+        backgroundColor: '#4caf50',
+        color: 'white',
+        border: 'none',
+        borderRadius: '5px',
+        cursor: 'pointer'
+    },
+    confirmButton: {
+        marginTop: '20px',
+        padding: '10px 25px',
+        backgroundColor: '#4caf50',
+        color: 'white',
+        border: 'none',
+        borderRadius: '5px',
+        cursor: 'pointer',
+        marginRight: '10px'
+    },
+    cancelButton: {
+        marginTop: '20px',
+        padding: '10px 25px',
+        backgroundColor: '#f44336',
         color: 'white',
         border: 'none',
         borderRadius: '5px',
