@@ -20,6 +20,9 @@ function Home() {
     const [fieldErrors, setFieldErrors] = useState({});
     const [selectedColor, setSelectedColor] = useState("all");
 
+    // State to control the image animation
+    const [isImageFading, setIsImageFading] = useState(false);
+
     const basePrice = 189000; // base product price
 
     // Delivery prices for all 58 wilayas (example values)
@@ -46,8 +49,8 @@ function Home() {
         if (!wilaya || !location) return;
         const fee = location === "home" ? deliveryFeesHome[wilaya] : deliveryFeesOffice[wilaya];
         setDeliveryPrice(fee || 0);
-        document.getElementById('price-delivery').value = (fee || 0) + " DA";
-        document.getElementById('total-price').value = (basePrice + (fee || 0)) + " DA";
+        document.getElementById('price-delivery').value = (fee || 0).toLocaleString() + " DA";
+        document.getElementById('total-price').value = (basePrice + (fee || 0)).toLocaleString() + " DA";
     };
 
     const handleWilayaChange = (e) => {
@@ -63,7 +66,19 @@ function Home() {
     };
 
     const handleColorChange = (color) => {
-        setSelectedColor(color);
+        // Don't re-animate if the same color is selected
+        if (color === selectedColor) return;
+
+        // 1. Start the fade-out animation
+        setIsImageFading(true);
+
+        // 2. Wait for the animation to complete (should match CSS transition duration)
+        setTimeout(() => {
+            // 3. Change the image source
+            setSelectedColor(color);
+            // 4. Start the fade-in animation
+            setIsImageFading(false);
+        }, 400); 
     };
 
     const imagesRef = useRef(null);
@@ -220,7 +235,7 @@ function Home() {
             <div ref={imagesRef} className='img-btn'>
                 <div className='container-images'>
                     <img 
-                        className='img-color' 
+                        className={`img-color ${isImageFading ? 'fading' : ''}`} 
                         src={colorImages[selectedColor].src} 
                         alt={colorImages[selectedColor].alt} 
                     />
@@ -328,7 +343,7 @@ function Home() {
                             style={fieldErrors.wilaya ? errorStyle : {}}
                         >
                             <option value="" disabled>-- Select your wilaya --</option>
-                           <option value="1">01 - Adrar</option>
+                            <option value="1">01 - Adrar</option>
                             <option value="2">02 - Chlef</option>
                             <option value="3">03 - Laghouat</option>
                             <option value="4">04 - Oum El Bouaghi</option>
@@ -409,12 +424,12 @@ function Home() {
 
                     <label>
                         Delivery Price
-                        <input type="text" className='input' id='price-delivery' readOnly />
+                        <input type="text" className='input' id='price-delivery' readOnly defaultValue={"0 DA"}/>
                     </label>
 
                     <label>
                         Total Price
-                        <input type="text" className='input' id='total-price' readOnly />
+                        <input type="text" className='input' id='total-price' readOnly defaultValue={basePrice.toLocaleString() + " DA"}/>
                     </label>
                 </form>
             </div>
@@ -422,7 +437,7 @@ function Home() {
             <button className='btn-buy' onClick={handleBuyNow}>Buy Now</button>
 
             <div className='container-footer'>
-                <p className='footer-text'>© 2023 Store Name. All rights reserved.</p>
+                <p className='footer-text'>© 2025 Store Name. All rights reserved.</p>
             </div>
 
             {/* Confirmation Popup */}
@@ -442,8 +457,8 @@ function Home() {
                             <p><strong>Wilaya:</strong> {formData.wilaya}</p>
                             <p><strong>Delivery Location:</strong> {formData.location}</p>
                             <p><strong>Address:</strong> {formData.address}</p>
-                            <p><strong>Delivery Price:</strong> {formData.priceDelivery} DA</p>
-                            <p><strong>Total Price:</strong> {formData.totalPrice} DA</p>
+                            <p><strong>Delivery Price:</strong> {formData.priceDelivery.toLocaleString()} DA</p>
+                            <p><strong>Total Price:</strong> {formData.totalPrice.toLocaleString()} DA</p>
                         </div>
                         {isLoading ? (
                             <p style={{ color: '#4caf50', fontWeight: 'bold' }}>Sending order...</p>
