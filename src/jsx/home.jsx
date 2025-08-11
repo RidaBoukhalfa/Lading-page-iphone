@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import emailjs from '@emailjs/browser';
 import all from '../images/all_colors.jpg';
 import black from '../images/black.jpg';
 import desert from '../images/desert.jpg';
@@ -9,6 +10,9 @@ import battery from '../images/battery.png';
 import phone from '../images/phone.png';
 import processor from '../images/processor_.png';
 import '../css/home.css';
+
+// Initialize EmailJS with your Public Key (can be done globally or in component)
+emailjs.init('user_abc123xyz789'); // Replace with your actual EmailJS Public Key
 
 function Home() {
     const [alertMessage, setAlertMessage] = useState("");
@@ -25,10 +29,13 @@ function Home() {
     const [selectedColor, setSelectedColor] = useState("all");
     const [quantity, setQuantity] = useState(1);
     const [isImageFading, setIsImageFading] = useState(false);
-    const [isBottomButtonVisible, setIsBottomButtonVisible] = useState(true); // State for bottom button visibility
+    const [isBottomButtonVisible, setIsBottomButtonVisible] = useState(true);
+
+    const form = useRef(); // Add useRef for the form
+    const imagesRef = useRef(null);
+    const buyRef = useRef(null);
 
     const formattedPrice = 295000.00;
-
 
     const deliveryFeesHome = {
         "1": 3000, "2": 2000, "3": 2500, "4": 2000, "5": 1800, "6": 2200, "7": 2100, "8": 2300, "9": 2400, "10": 2000,
@@ -84,9 +91,6 @@ function Home() {
         }, 400);
     };
 
-    const imagesRef = useRef(null);
-    const buyRef = useRef(null);
-
     const scrollToSection = (elementRef) => {
         const navHeight = document.querySelector('.nav').offsetHeight;
         const offsetTop = elementRef.current.offsetTop;
@@ -94,6 +98,16 @@ function Home() {
             top: offsetTop - navHeight - 20,
             behavior: 'smooth'
         });
+    };
+
+    const validatePhoneNumber = (phone) => {
+        const phoneRegex = /^(05|06|07)\d{8}$/;
+        return phoneRegex.test(phone);
+    };
+
+    const validateName = (name) => {
+        const nameRegex = /^[a-zA-Z\u0600-\u06FF\s-]+$/;
+        return nameRegex.test(name);
     };
 
     const validateForm = () => {
@@ -108,8 +122,8 @@ function Home() {
         const location = locationType;
         const qty = quantity;
 
-        if (!name) errors.name = true;
-        if (!phone) errors.phone = true;
+        if (!name || !validateName(name)) errors.name = true;
+        if (!phone || !validatePhoneNumber(phone)) errors.phone = true;
         if (!ram) errors.ram = true;
         if (!storage) errors.storage = true;
         if (!sim) errors.sim = true;
@@ -152,12 +166,33 @@ function Home() {
         };
     };
 
+    const clearForm = () => {
+        document.getElementById('name').value = '';
+        document.getElementById('email').value = '';
+        document.getElementById('phone').value = '';
+        document.getElementById('address').value = '';
+        document.getElementById('quantity').value = 1;
+        document.getElementById('price-delivery').value = '0 دج';
+        document.getElementById('total-price').value = (formattedPrice * 1).toLocaleString('ar-DZ') + ' دج';
+        document.querySelectorAll('input[name="ram"]').forEach(input => input.checked = false);
+        document.querySelectorAll('input[name="storage"]').forEach(input => input.checked = false);
+        document.querySelectorAll('input[name="sim"]').forEach(input => input.checked = false);
+        document.querySelectorAll('input[name="color"]').forEach(input => input.checked = false);
+        document.querySelectorAll('input[name="location"]').forEach(input => input.checked = false);
+        setSelectedWilaya('');
+        setLocationType('');
+        setQuantity(1);
+        setDeliveryPrice(0);
+        setFieldErrors({});
+        setFormData(null);
+    };
+
     const handleBuyNow = () => {
         if (!validateForm()) {
-            setAlertMessage("⚠ الرجاء ملء جميع الحقول المطلوبة.");
+            setAlertMessage("⚠ الرجاء ملء جميع الحقول المطلوبة بشكل صحيح.");
             setAlertType("error");
             setIsClosing(false);
-            scrollToSection(buyRef); // Scroll to form if validation fails
+            scrollToSection(buyRef);
             return;
         }
 
@@ -166,42 +201,67 @@ function Home() {
         setShowConfirmation(true);
     };
 
-    const handleConfirmOrder = async () => {
+    const handleConfirmOrder = async (e) => {
+        e.preventDefault(); // Prevent default form submission
         setIsLoading(true);
         setAlertMessage("");
         setAlertType("");
         setIsClosing(false);
 
         try {
-            await fetch(
-                'https://script.google.com/macros/s/AKfycbxJmlfCiWxx_6CIch6aC8DZ9qDF4PnKMvibZ8u66GB-e-7_P5D413nh8AzBgvKHlTJi/exec',
+            // Log form data for debugging
+            console.log('Form data being sent:', formData);
+
+            // Step 1: Send data to Google Apps Script
+            try {
+                await fetch(
+                    'https://script.google.com/macros/s/AKfycbxJmlfCiWxx_6CIch6aC8DZ9qDF4PnKMvibZ8u66GB-e-7_P5D413nh8AzBgvKHlTJi/exec',
+                    {
+                        method: 'POST',
+                        mode: 'no-cors', // Fallback to bypass CORS
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(formData),
+                    }
+                );
+                console.log('Google Apps Script request sent (no-cors mode, response not available)');
+            } catch (googleError) {
+                console.error('Google Apps Script error:', googleError);
+                setAlertMessage("⚠ خطأ في إرسال البيانات إلى Google Apps Script. سيتم محاولة إرسال البريد الإلكتروني.");
+                setAlertType("warning");
+            }
+
+            // Step 2: Send email notification via EmailJS using sendForm
+            const emailResponse = await emailjs.sendForm(
+                'service_ugyib2b', // Replace with your EmailJS Service ID
+                'template_u6nr92n', // Replace with your EmailJS Template ID
+                form.current,
                 {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
+                    publicKey: 'smM9wzUJ6emVrF-EW', // Replace with your actual EmailJS Public Key
                 }
             );
+
+            console.log('EmailJS response: SUCCESS!', emailResponse);
+
             setShowConfirmation(false);
             setShowSuccessPopup(true);
-        } catch {
-            setAlertMessage("❌ خطأ في إرسال الطلب. الرجاء المحاولة مرة أخرى.");
+        } catch (error) {
+            console.error('EmailJS error: FAILED...', error.text || error.message);
+            setAlertMessage(`❌ خطأ في إرسال الطلب أو الإشعار: ${error.text || error.message || 'غير معروف'}`);
             setAlertType("error");
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Intersection Observer to hide/show bottom button when form is in viewport
     useEffect(() => {
         const observer = new IntersectionObserver(
             ([entry]) => {
-                setIsBottomButtonVisible(!entry.isIntersecting); // Hide button when form is in view
+                setIsBottomButtonVisible(!entry.isIntersecting);
             },
             {
                 root: null,
                 rootMargin: '0px',
-                threshold: 0.1 // Trigger when 10% of the form is visible
+                threshold: 0.1
             }
         );
 
@@ -226,10 +286,7 @@ function Home() {
         white: { src: white, alt: "اللون الأبيض" }
     };
 
-
-
     const [showSpecs, setShowSpecs] = useState(false);
-
 
     return (
         <div className='container-home' dir="rtl">
@@ -287,16 +344,28 @@ function Home() {
 
             <div ref={buyRef} className='container-form'>
                 <h2>نموذج الطلب</h2>
-                <form className='form' onSubmit={(e) => e.preventDefault()}>
+                <form className='form' ref={form} onSubmit={handleConfirmOrder}>
                     <label>
                         الاسم *
                         <input
                             type="text"
                             className='input'
                             id='name'
+                            name="name"
                             style={fieldErrors.name ? errorStyle : {}}
-                            placeholder="أدخل اسمك"
+                            placeholder="أدخل اسمك الكامل"
+                            onInput={(e) => {
+                                const value = e.target.value;
+                                if (!validateName(value)) {
+                                    e.target.value = value.replace(/[^a-zA-Z\u0600-\u06FF\s]/g, '');
+                                }
+                            }}
                         />
+                        {fieldErrors.name && (
+                            <span style={{ color: 'red', fontSize: '0.9em' }}>
+                                يجب أن يحتوي الاسم على حروف عربية أو إنجليزية فقط
+                            </span>
+                        )}
                     </label>
 
                     <label>
@@ -305,6 +374,7 @@ function Home() {
                             type="email"
                             className='input'
                             id='email'
+                            name="email"
                             placeholder="أدخل بريدك الإلكتروني"
                         />
                     </label>
@@ -312,12 +382,24 @@ function Home() {
                     <label>
                         رقم الهاتف *
                         <input
-                            type="number"
+                            type="text"
                             className='input'
                             id='phone'
+                            name="phone"
                             style={fieldErrors.phone ? errorStyle : {}}
                             placeholder="أدخل رقم هاتفك"
+                            onInput={(e) => {
+                                const value = e.target.value;
+                                if (!/^\d*$/.test(value)) {
+                                    e.target.value = value.replace(/\D/g, '');
+                                }
+                            }}
                         />
+                        {fieldErrors.phone && (
+                            <span style={{ color: 'red', fontSize: '0.9em' }}>
+                                يجب أن يبدأ رقم الهاتف بـ 05، 06، أو 07 ويتكون من 10 أرقام
+                            </span>
+                        )}
                     </label>
 
                     <label>الذاكرة العشوائية (RAM) *</label>
@@ -388,12 +470,19 @@ function Home() {
                     </label>
 
                     <label>موقع التوصيل *</label>
-                    <div className="radio-group" style={fieldErrors.location ? { border: "1.5px solid red", padding: "5px", borderRadius: "8px" } : {}}>
+                    <div id="location" className="radio-group" style={fieldErrors.location ? { border: "1.5px solid red", padding: "5px", borderRadius: "8px" } : {}}>
                         <input type="radio" id="loc-home" name="location" value="home" onChange={handleLocationChange} />
                         <label htmlFor="loc-home">المنزل</label>
                         <input type="radio" id="loc-office" name="location" value="office" onChange={handleLocationChange} />
                         <label htmlFor="loc-office">المكتب</label>
                     </div>
+
+                    {locationType && (
+                        <span className="note-animation">
+                            <span style={{ fontWeight: 'bold' }}>ملاحظة </span>
+                            مدة التوصيل تستغرق من يوم الى 3 ايام
+                        </span>
+                    )}
 
                     <label>
                         العنوان
@@ -401,6 +490,7 @@ function Home() {
                             type="text"
                             className='input'
                             id='address'
+                            name="address"
                             placeholder="أدخل عنوانك"
                             style={fieldErrors.address ? errorStyle : {}}
                         />
@@ -412,6 +502,7 @@ function Home() {
                             type="number"
                             className='input'
                             id='quantity'
+                            name="quantity"
                             value={quantity}
                             onChange={handleQuantityChange}
                             min="1"
@@ -422,132 +513,107 @@ function Home() {
 
                     <label>
                         سعر التوصيل
-                        <input type="text" className='input' id='price-delivery' readOnly defaultValue={"0 دج"} />
+                        <input
+                            type="text"
+                            className='input'
+                            id='price-delivery'
+                            name="priceDelivery"
+                            readOnly
+                            defaultValue={"0 دج"}
+                        />
                     </label>
 
                     <label>
                         السعر الإجمالي
-                        <input type="text" className='input' id='total-price' readOnly defaultValue={(formattedPrice * quantity).toLocaleString('ar-DZ') + " دج"} />
+                        <input
+                            type="text"
+                            className='input'
+                            id='total-price'
+                            name="totalPrice"
+                            readOnly
+                            defaultValue={(formattedPrice * quantity).toLocaleString('ar-DZ') + " دج"}
+                        />
                     </label>
+
+                    <input
+                        type="hidden"
+                        name="orderDate"
+                        value={new Date().toLocaleString('ar-DZ')}
+                    />
                 </form>
             </div>
 
             <button className='btn-buy' onClick={handleBuyNow}>اشتر الآن</button>
 
-            {/* <div className='performance-specs'>
-                <h2 className='title'>مواصفات IPHONE 16 PRO MAX</h2>
-                <div className='specs-container'>
-                    <div className='spec-item'>
-                        <h3 className='spec-title'>المعالج</h3>
-                        <p>شريحة A18 Pro مع معالج سداسي النواة (2 نواة أداء، 4 نوى كفاءة)، وحدة معالجة رسوميات سداسية النواة، ومحرك عصبي 16 نواة، يوفر أداءً أسرع بنسبة 20% ورسوميات محسنة بنسبة 30% مقارنة بالجيل السابق.</p>
-                    </div>
-                    <div className='spec-item'>
-                        <h3 className='spec-title'>الذاكرة</h3>
-                        <p>8GB LPDDR5 RAM لتعدد المهام بسلاسة ودعم التطبيقات المتطلبة مثل الألعاب وتحرير الفيديو.</p>
-                    </div>
-                    <div className='spec-item'>
-                        <h3 className='spec-title'>التخزين</h3>
-                        <p>خيارات تخزين داخلية 256 جيجابايت، 512 جيجابايت، أو 1 تيرابايت، توفر مساحة وفيرة للتطبيقات، الصور، الفيديوهات، والملفات.</p>
-                    </div>
-                    <div className='spec-item'>
-                        <h3 className='spec-title'>الشاشة</h3>
-                        <p>شاشة سوبر ريتينا XDR مقاس 6.9 بوصة مع تقنية ProMotion، معدل تحديث 120Hz، تقنية العرض الدائم، سطوع يصل إلى 2000 شمعة، وحماية Ceramic Shield لألوان زاهية ومتانة عالية.</p>
-                    </div>
-                    <div className='spec-item'>
-                        <h3 className='spec-title'>نظام الكاميرا</h3>
-                        <p>كاميرا رئيسية Fusion بدقة 48 ميجابكسل مع تصوير حوسبي متقدم، كاميرا فائقة الاتساع 12 ميجابكسل، كاميرا تيليفوتو 12 ميجابكسل بتقريب 5x، ودعم تسجيل فيديو Dolby Vision بدقة 4K بمعدل 120 إطارًا في الثانية.</p>
-                    </div>
-                    <div className='spec-item'>
-                        <h3 className='spec-title'>البطارية</h3>
-                        <p>ما يصل إلى 29 ساعة من تشغيل الفيديو، مع شحن سريع (50% في 30 دقيقة) وشحن لاسلكي MagSafe حتى 25 واط.</p>
-                    </div>
-                    <div className='spec-item'>
-                        <h3 className='spec-title'>الاتصال</h3>
-                        <p>5G (sub-6 GHz و mmWave)، Wi-Fi 7 لتحميل فائق السرعة، USB-C 3.2 Gen 2 لنقل البيانات بسرعة عالية، ودعم بطاقتي eSIM.</p>
-                    </div>
-                    <div className='spec-item'>
-                        <h3 className='spec-title'>نظام التشغيل</h3>
-                        <p>iOS 18 مع ميزات ذكاء اصطناعي متقدمة، تحكم محسن بالخصوصية، وتكامل سلس مع خدمات نظام Apple البيئي.</p>
-                    </div>
-                </div>
-            </div> */}
-
-
-
-
-                <div className="performance-specs">
-                    {/* Title row */}
-                    <div className="specs-header">
-                        <h2 className="title-performance">مواصفات IPHONE 16 PRO MAX</h2>
-
-                        <div className='desc'>
-                            <div className='icon-container'>
-                                <div className='icon-item'>
-                                    <img src={camera} alt="كاميرا" />
-                                    <h6>كاميرا ثلاثية العدسات و تصوير ليلي مذهل وفيديو بدقة 8K.</h6>
-                                </div>
-                                <div className='icon-item'>
-                                    <img src={battery} alt="بطارية" />
-                                    <h6>بطارية + MagSafe: عمر أطول وشحن أسرع.</h6>
-                                </div>
-                                <div className='icon-item'>
-                                    <img src={phone} alt="هاتف" />
-                                    <h6>شاشة سوبر ريتينا XDR 120Hz: ألوان زاهية وحركة سلسة.</h6>
-                                </div>
-                                <div className='icon-item'>
-                                    <img src={processor} alt="معالج" />
-                                    <h6>A18 Pro: سرعة استثنائية وكفاءة طاقة عالية.</h6>
-                                </div>
+            <div className="performance-specs">
+                <div className="specs-header">
+                    <h2 className="title-performance">مواصفات IPHONE 16 PRO MAX</h2>
+                    <div className='desc'>
+                        <div className='icon-container'>
+                            <div className='icon-item'>
+                                <img src={camera} alt="كاميرا" />
+                                <h6>كاميرا ثلاثية العدسات و تصوير ليلي مذهل وفيديو بدقة 8K.</h6>
+                            </div>
+                            <div className='icon-item'>
+                                <img src={battery} alt="بطارية" />
+                                <h6>بطارية + MagSafe: عمر أطول وشحن أسرع.</h6>
+                            </div>
+                            <div className='icon-item'>
+                                <img src={phone} alt="هاتف" />
+                                <h6>شاشة سوبر ريتينا XDR 120Hz: ألوان زاهية وحركة سلسة.</h6>
+                            </div>
+                            <div className='icon-item'>
+                                <img src={processor} alt="معالج" />
+                                <h6>A18 Pro: سرعة استثنائية وكفاءة طاقة عالية.</h6>
                             </div>
                         </div>
-
-
-                        <button
+                    </div>
+                    <button
                         className="toggle-btn"
                         onClick={() => setShowSpecs(!showSpecs)}
-                        >
+                    >
                         {showSpecs ? 'إخفاء' : 'عرض المزيد'}
-                        </button>
-                    </div>
+                    </button>
+                </div>
 
-                    {/* Collapsible content */}
-                    <div className={`specs-container-wrapper ${showSpecs ? 'open' : ''}`}>
-                        <div className="specs-container">
-                            <div className='spec-item'>
-                                <h3 className='spec-title'>المعالج</h3>
-                                <p>شريحة A18 Pro مع معالج سداسي النواة (2 نواة أداء، 4 نوى كفاءة)، وحدة معالجة رسوميات سداسية النواة، ومحرك عصبي 16 نواة، يوفر أداءً أسرع بنسبة 20% ورسوميات محسنة بنسبة 30% مقارنة بالجيل السابق.</p>
-                            </div>
-                            <div className='spec-item'>
-                                <h3 className='spec-title'>الذاكرة</h3>
-                                <p>8GB LPDDR5 RAM لتعدد المهام بسلاسة ودعم التطبيقات المتطلبة مثل الألعاب وتحرير الفيديو.</p>
-                            </div>
-                            <div className='spec-item'>
-                                <h3 className='spec-title'>التخزين</h3>
-                                <p>خيارات تخزين داخلية 256 جيجابايت، 512 جيجابايت، أو 1 تيرابايت، توفر مساحة وفيرة للتطبيقات، الصور، الفيديوهات، والملفات.</p>
-                            </div>
-                            <div className='spec-item'>
-                                <h3 className='spec-title'>الشاشة</h3>
-                                <p>شاشة سوبر ريتينا XDR مقاس 6.9 بوصة مع تقنية ProMotion، معدل تحديث 120Hz، تقنية العرض الدائم، سطوع يصل إلى 2000 شمعة، وحماية Ceramic Shield لألوان زاهية ومتانة عالية.</p>
-                            </div>
-                            <div className='spec-item'>
-                                <h3 className='spec-title'>نظام الكاميرا</h3>
-                                <p>كاميرا رئيسية Fusion بدقة 48 ميجابكسل مع تصوير حوسبي متقدم، كاميرا فائقة الاتساع 12 ميجابكسل، كاميرا تيليفوتو 12 ميجابكسل بتقريب 5x، ودعم تسجيل فيديو Dolby Vision بدقة 4K بمعدل 120 إطارًا في الثانية.</p>
-                            </div>
-                            <div className='spec-item'>
-                                <h3 className='spec-title'>البطارية</h3>
-                                <p>ما يصل إلى 29 ساعة من تشغيل الفيديو، مع شحن سريع (50% في 30 دقيقة) وشحن لاسلكي MagSafe حتى 25 واط.</p>
-                            </div>
-                            <div className='spec-item'>
-                                <h3 className='spec-title'>الاتصال</h3>
-                                <p>5G (sub-6 GHz و mmWave)، Wi-Fi 7 لتحميل فائق السرعة، USB-C 3.2 Gen 2 لنقل البيانات بسرعة عالية، ودعم بطاقتي eSIM.</p>
-                            </div>
-                            <div className='spec-item'>
-                                <h3 className='spec-title'>نظام التشغيل</h3>
-                                <p>iOS 18 مع ميزات ذكاء اصطناعي متقدمة، تحكم محسن بالخصوصية، وتكامل سلس مع خدمات نظام Apple البيئي.</p>
-                            </div>
+                <div className={`specs-container-wrapper ${showSpecs ? 'open' : ''}`}>
+                    <div className="specs-container">
+                        <div className='spec-item'>
+                            <h3 className='spec-title'>المعالج</h3>
+                            <p>شريحة A18 Pro مع معالج سداسي النواة (2 نواة أداء، 4 نوى كفاءة)، وحدة معالجة رسوميات سداسية النواة، ومحرك عصبي 16 نواة، يوفر أداءً أسرع بنسبة 20% ورسوميات محسنة بنسبة 30% مقارنة بالجيل السابق.</p>
+                        </div>
+                        <div className='spec-item'>
+                            <h3 className='spec-title'>الذاكرة</h3>
+                            <p>8GB LPDDR5 RAM لتعدد المهام بسلاسة ودعم التطبيقات المتطلبة مثل الألعاب وتحرير الفيديو.</p>
+                        </div>
+                        <div className='spec-item'>
+                            <h3 className='spec-title'>التخزين</h3>
+                            <p>خيارات تخزين داخلية 256 جيجابايت، 512 جيجابايت، أو 1 تيرابايت، توفر مساحة وفيرة للتطبيقات، الصور، الفيديوهات، والملفات.</p>
+                        </div>
+                        <div className='spec-item'>
+                            <h3 className='spec-title'>الشاشة</h3>
+                            <p>شاشة سوبر ريتينا XDR مقاس 6.9 بوصة مع تقنية ProMotion، معدل تحديث 120Hz، تقنية العرض الدائم، سطوع يصل إلى 2000 شمعة، وحماية Ceramic Shield لألوان زاهية ومتانة عالية.</p>
+                        </div>
+                        <div className='spec-item'>
+                            <h3 className='spec-title'>نظام الكاميرا</h3>
+                            <p>كاميرا رئيسية Fusion بدقة 48 ميجابكسل مع تصوير حوسبي متقدم، كاميرا فائقة الاتساع 12 ميجابكسل، كاميرا تيليفوتو 12 ميجابكسل بتقريب 5x، ودعم تسجيل فيديو Dolby Vision بدقة 4K بمعدل 120 إطارًا في الثانية.</p>
+                        </div>
+                        <div className='spec-item'>
+                            <h3 className='spec-title'>البطارية</h3>
+                            <p>ما يصل إلى 29 ساعة من تشغيل الفيديو، مع شحن سريع (50% في 30 دقيقة) وشحن لاسلكي MagSafe حتى 25 واط.</p>
+                        </div>
+                        <div className='spec-item'>
+                            <h3 className='spec-title'>الاتصال</h3>
+                            <p>5G (sub-6 GHz و mmWave)، Wi-Fi 7 لتحميل فائق السرعة، USB-C 3.2 Gen 2 لنقل البيانات بسرعة عالية، ودعم بطاقتي eSIM.</p>
+                        </div>
+                        <div className='spec-item'>
+                            <h3 className='spec-title'>نظام التشغيل</h3>
+                            <p>iOS 18 مع ميزات ذكاء اصطناعي متقدمة، تحكم محسن بالخصوصية، وتكامل سلس مع خدمات نظام Apple البيئي.</p>
                         </div>
                     </div>
                 </div>
+            </div>
+
             <h2>الأسئلة الشائعة</h2>
             <div className="chat-card">
                 <div className="chat-header">
@@ -665,7 +731,7 @@ function Home() {
                             <p><strong>الاسم:</strong> {formData.name}</p>
                             <p><strong>البريد الإلكتروني:</strong> {formData.email || 'غير متوفر'}</p>
                             <p><strong>رقم الهاتف:</strong> {formData.phone}</p>
-                            <p><strong>الذاكرة العشوائية:</strong> {formData.ram}</p>
+                            <p><strong>الذاكرة العشوائية (RAM):</strong> {formData.ram}</p>
                             <p><strong>التخزين:</strong> {formData.storage}</p>
                             <p><strong>عدد بطاقات SIM:</strong> {formData.sim}</p>
                             <p><strong>اللون:</strong> {formData.color}</p>
@@ -705,7 +771,10 @@ function Home() {
                         <h2>تم الطلب بنجاح!</h2>
                         <p>شكرًا لشرائك.</p>
                         <button
-                            onClick={() => setShowSuccessPopup(false)}
+                            onClick={() => {
+                                setShowSuccessPopup(false);
+                                clearForm();
+                            }}
                             style={styles.closeButton}
                         >
                             إغلاق

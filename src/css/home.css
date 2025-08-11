@@ -290,7 +290,64 @@ html, body {
     display: block;
     width: 100%;
     max-width: 600px;
+    
+    animation: slideX 1s infinite linear;
 }
+
+@keyframes slideX {
+    0% { transform: translateX(-5px); }
+    2% { transform: translateX(-6px); }
+    4% { transform: translateX(-7px); }
+    6% { transform: translateX(-8px); }
+    8% { transform: translateX(-9px); }
+    10% { transform: translateX(-10px); }
+    12% { transform: translateX(-9px); }
+    14% { transform: translateX(-8px); }
+    16% { transform: translateX(-7px); }
+    18% { transform: translateX(-6px); }
+    20% { transform: translateX(-5px); }
+    22% { transform: translateX(-4px); }
+    24% { transform: translateX(-3px); }
+    26% { transform: translateX(-2px); }
+    28% { transform: translateX(-1px); }
+    30% { transform: translateX(0px); }
+    32% { transform: translateX(1px); }
+    34% { transform: translateX(2px); }
+    36% { transform: translateX(3px); }
+    38% { transform: translateX(4px); }
+    40% { transform: translateX(5px); }
+    42% { transform: translateX(6px); }
+    44% { transform: translateX(7px); }
+    46% { transform: translateX(8px); }
+    48% { transform: translateX(9px); }
+    50% { transform: translateX(10px); }
+    52% { transform: translateX(9px); }
+    54% { transform: translateX(8px); }
+    56% { transform: translateX(7px); }
+    58% { transform: translateX(6px); }
+    60% { transform: translateX(5px); }
+    62% { transform: translateX(4px); }
+    64% { transform: translateX(3px); }
+    66% { transform: translateX(2px); }
+    68% { transform: translateX(1px); }
+    70% { transform: translateX(0px); }
+    72% { transform: translateX(0px); }
+    74% { transform: translateX(0px); }
+    76% { transform: translateX(0px); }
+    78% { transform: translateX(0px); }
+    80% { transform: translateX(0px); }
+    82% { transform: translateX(0px); }
+    84% { transform: translateX(0px); }
+    86% { transform: translateX(0px); }
+    88% { transform: translateX(0px); }
+    90% { transform: translateX(0px); }
+    92% { transform: translateX(0px); }
+    94% { transform: translateX(0px); }
+    96% { transform: translateX(0px); }
+    98% { transform: translateX(0px); }
+    100% { transform: translateX(0px); }
+}
+
 
 .btn-buy:hover {
     background-color: #388e3c;
@@ -802,4 +859,25 @@ select.input {
   color: #555;
   margin: 0;
   line-height: 1.5;
+}
+
+
+
+.note-animation {
+    color: #e8f5e9;
+    background-color: #4caf50;
+    padding: 5px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    display: inline-block; /* important for scaling */
+    animation: scalePulse 1.2s ease-in-out infinite;
+}
+
+@keyframes scalePulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(0.9);
+    }
 }
