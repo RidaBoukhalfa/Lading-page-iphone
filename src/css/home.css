@@ -130,13 +130,19 @@ html, body {
     color: #333;
     font-size: 1.8rem;
     font-weight: 700;
-    margin-top: 3rem;
+    margin-top: 1.5rem;
     background-color: #4caf50;
     padding: 0.6rem 5rem;
     border-radius: 1rem;
 }
 
 /* Description Section */
+
+.desc .icon-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 1.5rem;
+}
 .icon-container {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -148,7 +154,7 @@ html, body {
 
 .icon-item {
     text-align: center;
-    padding: 1rem;
+    padding: 0.5rem;
     background: #fff;
     border-radius: 1rem;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
@@ -162,11 +168,11 @@ html, body {
 .icon-item img {
     width: 80px;
     height: auto;
-    margin-bottom: 0.8rem;
+    margin-bottom: -1rem;
 }
 
-.icon-item p {
-    font-size: 0.78rem;
+.icon-item h6 {
+    /* font-size: 0.78rem; */
     color: #555;
     line-height: 1.4;
 }
@@ -176,25 +182,25 @@ html, body {
     color: #222;
 }
 
-/* Responsive Adjustments */
 @media (max-width: 768px) {
-    .icon-container {
+    .desc .icon-container {
         grid-template-columns: 1fr;
         gap: 1.5rem;
     }
-    .icon-item img {
-        width: 70px;
+    .desc .icon-item img {
+        width: 40px;
     }
 }
 
 @media (max-width: 480px) {
-    .icon-item img {
+    .desc .icon-item img {
         width: 60px;
     }
-    .icon-item p {
+    .desc .icon-item h6 {
         font-size: 0.9rem;
     }
 }
+
 
 /* Form Container */
 .container-form {
@@ -298,6 +304,7 @@ html, body {
     padding: 1rem;
     width: 100%;
     margin-top: 2rem;
+    margin-bottom: 4rem;
 }
 
 /* Custom Alert */
@@ -391,6 +398,13 @@ html, body {
     }
 }
 
+
+.title-socail-media {
+    margin-top: 3rem;
+}
+
+
+
 /* Select Dropdown */
 select.input {
     appearance: none;
@@ -453,7 +467,7 @@ select.input {
     animation: fadeIn 0.8s ease;
 }
 
-.performance-specs .title {
+.performance-specs .title-performance {
     font-size: 2rem;
     font-weight: 700;
     color: #222;
@@ -499,7 +513,7 @@ select.input {
     .specs-container {
         grid-template-columns: 1fr;
     }
-    .performance-specs .title {
+    .performance-specs .title-performance {
         font-size: 1.6rem;
     }
     .spec-title {
@@ -706,4 +720,86 @@ select.input {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+
+
+
+
+
+.performance-specs {
+  width: 100%;
+  background-color: #fff;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Header row */
+.specs-header {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Title style */
+.title-performance {
+  font-size: 20px;
+  font-weight: bold;
+  margin: 0;
+  color: #333;
+}
+
+/* Button style */
+.toggle-btn {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.3s ease;
+}
+
+.toggle-btn:hover {
+  background: #43a047;
+}
+
+/* Animation wrapper */
+.specs-container-wrapper {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s ease, opacity 0.5s ease;
+  opacity: 0;
+}
+
+.specs-container-wrapper.open {
+  max-height: 2000px; /* Large enough for all content */
+  opacity: 1;
+}
+
+/* Inner container */
+.specs-container {
+  padding-top: 10px;
+}
+
+/* Individual spec item */
+.spec-item {
+  margin-bottom: 15px;
+}
+
+.spec-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #222;
+  margin-bottom: 5px;
+}
+
+.spec-item p {
+  font-size: 14px;
+  color: #555;
+  margin: 0;
+  line-height: 1.5;
 }
