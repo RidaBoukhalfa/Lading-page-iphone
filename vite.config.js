@@ -3,12 +3,9 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: import.meta.env.MODE === 'production' && import.meta.env.VITE_DEPLOY_TARGET === 'gh-pages'
-    ? '/Lading-page-iphone/' // for GitHub Pages
-    : '/',                   // for Netlify
+  base: '/', // Adjust the base path if needed
   server: {
-    host: true,
-    port: 5173
+    host: true,      // Enables access from other devices on your network
+    port: 5173       // Optional (default is 5173)
   }
 });
-
